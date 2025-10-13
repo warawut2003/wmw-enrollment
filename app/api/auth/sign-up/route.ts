@@ -1,24 +1,27 @@
 import {NextResponse} from "next/server";
 import { Prisma,PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { randomUUID } from "crypto";
+import { sendVerificationEmail } from "@/lib/mail";
 
 const prisma = new PrismaClient();
 
 interface SignUpRequestBody {
     nationalId : string;
-    lasercode? : string;
     email : string;
-    password : string;
-    pdpaConsent : boolean;
 }
 
 
 export async function POST(req: Request){
     try{
-        const body: SignUpRequestBody = await req.json();
-        const {nationalId, lasercode, email, password, pdpaConsent} = body;
+        const body =  await req.json();
+        const {nationalId, lasercode, email, password, confirmPassword, pdpaConsent} = body;
 
-        if(!nationalId || !email || !password){
+        if (password !== confirmPassword) {
+            return NextResponse.json({ message: 'รหัสผ่านและรหัสยืนยันไม่ตรงกัน' }, { status: 400 });
+        }
+
+        if(!nationalId || !email || !password ){
             return NextResponse.json({message : 'กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน'}, {status: 400});
         }
 
@@ -50,37 +53,31 @@ export async function POST(req: Request){
             return NextResponse.json({message : 'อีเมลนี้ถูกใช้งานแล้ว'}, {status: 409});
         }
 
+        const verificationToken  = randomUUID();
+        const expires = new Date(new Date().getTime() +3600 *1000);
+
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        const newUser = await prisma.$transaction(async (tx : Prisma.TransactionClient) => {
-            const createUser = await tx.user.create({
-                data : {
-                    email : email,
-                    password : hashedPassword,
-                    role : 'STUDENT',
-                },
-            });
-
-            await tx.application.update({
-                where : {
-                    id : application.id,
-                },
-                data : {
-                    userId : createUser.id,
-                    laserCode: lasercode,
-                    pdpaConsent: true,
-                },
-            });
-            return createUser;
-        });
-        return NextResponse.json({
-            message : 'ลงทะเบียนสำเร็จ',
-            user : {
-                email: newUser.email
+        await prisma.verificationToken.create({
+            data : {
+                identifier: email,
+                token: verificationToken,
+                expires,
+                hashedPassword : hashedPassword,
+                nationalId : nationalId,
+                laserCode : lasercode,
+                
             }
-        }, {status: 201})
+        });
+
+        await sendVerificationEmail(email, verificationToken);
+        
+        return NextResponse.json(
+            { message: 'ส่งอีเมลยืนยันแล้ว กรุณาตรวจสอบกล่องข้อความของคุณ' },
+            { status: 200 }
+        );
     } catch (error) {
-        console.error('Error during sign-up:', error);
-        return NextResponse.json({ message: 'เกิดข้อผิดพลาดในการลงทะเบียน' }, { status: 500 });
+        console.error('Error during sign-up request:', error);
+        return NextResponse.json({ message: 'เกิดข้อผิดพลาดในการส่งคำขอลงทะเบียน' }, { status: 500 });
     }
 }

@@ -26,8 +26,8 @@ function parseDate(dateString: string): Date | null {
     try {
         const [day, month, year] = dateString.split('/');
         if (!day || !month || !year) return null;
-        const christianYear = parseInt(year, 10) - 543;
-        return new Date(Date.UTC(christianYear, parseInt(month, 10) - 1, parseInt(day, 10)));
+        const yearInt = parseInt(year, 10);
+        return new Date(Date.UTC(yearInt, parseInt(month, 10) - 1, parseInt(day, 10)));
     } catch (e) {
         console.error(`Could not parse date: "${dateString}"`);
         return null;
