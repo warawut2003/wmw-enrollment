@@ -12,7 +12,33 @@ export async function GET(req: Request, { params} : {params : { nationalId : str
                 { status: 400 } // Bad Request
             );
         }
-    }catch(error){
 
+        const applicant = await prisma.application.findUnique({
+            where : { nationalId : nationalId,},
+            include :{
+                school : true,
+            },
+        });
+        if(!applicant){
+            return NextResponse.json(
+                {message : 'ไม่พบข้อมูลผู้สมัครในระบบ กรุณาตรวจสอบเลขบัตรประชาชน'},
+                {status: 404},
+            );
+        }
+
+        if(applicant.userId){
+            return NextResponse.json(
+                {message : 'เลขบัตรประชาชนนี้ได้ทำการลงทะเบียนไปแล้ว'},
+                {status: 400},
+            );
+        }
+
+        return NextResponse.json(applicant, {status : 200});
+    }catch(error){
+        console.error('Error fetching applicant:', error);
+        return NextResponse.json(
+            {message : 'เกิดข้อผิดพลาดจากทางเซิร์ฟเวอร์'},
+            {status : 500}
+        )
     }
 } 

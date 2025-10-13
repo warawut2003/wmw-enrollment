@@ -48,6 +48,7 @@ enum DocumentStatus {
 model User {
   id String  @id @default(cuid())
   email String  @unique
+  emailVerified DateTime?
   password  String
   role Role @default(STUDENT)
   createdAt DateTime  @default(now())
@@ -108,4 +109,14 @@ model School {
   province String
 
   application Application[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  hashedPassword String
+  nationalId     String
+  laserCode      String?
+  @@unique([identifier, token])
 }
