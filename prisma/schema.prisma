@@ -1,0 +1,111 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STUDENT
+  ADMIN
+}
+
+enum ApplicationStatus {
+  AWAITING_PHASE2_DOCS     // รอเอกสารยืนยันสิทธิ์สอบ
+  PENDING_APPROVAL         // รอตรวจสอบเอกสาร
+  ELIGIBLE_FOR_EXAM        // มีสิทธิ์สอบ
+  AWAITING_PHASE3_DECISION // รอการตัดสินใจ (ยืนยัน/สละสิทธิ์)
+  CONFIRMED                // ยืนยันสิทธิ์แล้ว (รอตรวจเอกสารมอบตัว)
+  WITHDRAWN                // สละสิทธิ์
+  ENROLLED                 // มอบตัวสำเร็จ
+  INCOMPLETE_DOCS          // เอกสารไม่ครบ
+  WAITING_LIST             // รอเรียกยืนยันสิทธิ์ (ตัวสำรอง)
+  NO_ACTION                // ไม่ดำเนินการ
+}
+
+enum DocumentType {
+  PAYMENT_SLIP             // สลิปชำระเงิน
+  PHASE2_CONFIRMATION      // เอกสารยืนยันสิทธิ์สอบ
+  ENROLLMENT_CONFIRMATION  // หนังสือยืนยันสิทธิ์
+  ENROLLMENT_CONTRACT      // สัญญามอบตัว
+  ENROLLMENT_FORM          // ใบมอบตัว
+}
+
+enum DocumentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id String  @id @default(cuid())
+  email String  @unique
+  password  String
+  role Role @default(STUDENT)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  application Application?
+}
+
+model Application {
+  id  String  @id @default(cuid())
+  nationalId  String  @unique
+  laserCode   String?
+  title     String 
+  firstName String
+  middleName  String?
+  lastName  String
+  dateOfBirth   DateTime?
+  email     String?
+  gpaTotal  Float?
+  gpaMath   Float?
+  gpaScience Float?
+
+  pdpaConsent         Boolean           @default(false)
+
+  applicationStatus   ApplicationStatus @default(AWAITING_PHASE2_DOCS)
+  prorityRank Int?
+  enrollmentType      String?
+  examRoom            String?   
+  seatNumber          String?   
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  user        User?       @relation(fields: [userId], references: [id])
+  userId      String?     @unique
+
+  school School @relation(fields:[schoolId], references:[id])
+  schoolId Int
+
+  documents   Document[]
+}
+
+model Document {
+  id String @id @default(cuid())
+  fileName String
+  fileUrl  String
+  documentType  DocumentType
+  status  DocumentStatus @default(PENDING)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  applicationId String
+  application Application @relation(fields : [applicationId],references: [id])
+}
+
+model School {
+  id Int @id @default(autoincrement())
+  name  String @unique
+  province String
+
+  application Application[]
+}
