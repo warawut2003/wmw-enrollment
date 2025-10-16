@@ -1,13 +1,13 @@
 "use client";
 
-import { useState,FormEvent, useEffect } from "react";
+import { useState, FormEvent, useEffect } from "react";
 import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Button from "@/components/ui/Button";
 
 
-export default function SignInPage(){
+export default function SignInPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
 
@@ -20,7 +20,7 @@ export default function SignInPage(){
     const [successMessage, setSuccessMessage] = useState<string | null>('');
 
     useEffect(() => {
-        if(searchParams.get('verified') === 'true'){
+        if (searchParams.get('verified') === 'true') {
             setSuccessMessage('✅ ยืนยันอีเมลสำเร็จแล้ว! กรุณาเข้าสู่ระบบ');
         }
     }, [searchParams]);
@@ -31,24 +31,22 @@ export default function SignInPage(){
         setError(null);
         setSuccessMessage(null);
 
-        try{
+        try {
             const result = await signIn('credentials', {
-                redirect : false,
-                email : email,
-                password : password,
+                // redirect: false,
+                email: email,
+                password: password,
             });
 
-            if(result?.error){
-                if(result.error === 'CredentialsSignin'){
+            if (result?.error) {
+                if (result.error === 'CredentialsSignin') {
                     setError('อีเมลหรือรหัสผ่านไม่ถูกต้อง');
-                }else{
+                } else {
                     setError(result.error);
                 }
                 setIsLoading(false);
-            }else if (result?.ok){
-                router.replace('/dashboard');
             }
-        }catch (error){
+        } catch (error) {
             console.error('Login failed:', error);
             setError('เกิดข้อผิดพลาดในการเข้าสู่ระบบ');
             setIsLoading(false);
@@ -69,7 +67,7 @@ export default function SignInPage(){
                         {successMessage}
                     </p>
                 )}
-                
+
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label htmlFor="email" className="block text-sm font-medium text-gray-700">
@@ -104,11 +102,11 @@ export default function SignInPage(){
                     {error && <p className="text-sm text-red-600 text-center">{error}</p>}
 
                     <Button
-                    type="submit"
-                    isLoading ={isLoading}
-                    variant="primary"
+                        type="submit"
+                        isLoading={isLoading}
+                        variant="primary"
                     >เข้าสู่ระบบ</Button>
-                    
+
                 </form>
 
                 <p className="mt-6 text-center text-sm text-gray-600">

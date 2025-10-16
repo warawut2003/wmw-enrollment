@@ -11,6 +11,7 @@ type StatusType =
     // Document Statuses
     'PENDING' |
     'APPROVED' |
+    'NOT_SUBMITTED' |
     'REJECTED';
 
 interface StatusBadgeProps {
@@ -18,8 +19,7 @@ interface StatusBadgeProps {
 }
 
 const StatusBadge = ({ status }: StatusBadgeProps) => {
-    const statusStyles: Record<StatusType, { text: string; className: string }> = {
-        // Application Statuses
+    const statusStyles: Record<StatusType | string, { text: string; className: string }> = {        // Application Statuses
         AWAITING_PHASE2_DOCS: { text: 'รอดำเนินการ', className: 'bg-gray-100 text-gray-800' },
         PENDING_APPROVAL: { text: 'รอตรวจสอบ', className: 'bg-yellow-100 text-yellow-800' },
         ELIGIBLE_FOR_EXAM: { text: 'มีสิทธิ์สอบ', className: 'bg-green-100 text-green-800' },
@@ -30,6 +30,8 @@ const StatusBadge = ({ status }: StatusBadgeProps) => {
         PENDING: { text: 'รอตรวจสอบ', className: 'bg-yellow-100 text-yellow-800' },
         APPROVED: { text: 'เอกสารผ่าน', className: 'bg-green-100 text-green-800' },
         REJECTED: { text: 'เอกสารไม่ผ่าน', className: 'bg-red-100 text-red-800' },
+
+        NOT_SUBMITTED: { text: 'รอดำเนินการ', className: 'bg-gray-100 text-gray-800' },
 
         // Default / Fallback cases
         ENROLLED: { text: 'มอบตัวสำเร็จ', className: 'bg-green-100 text-green-800' },
