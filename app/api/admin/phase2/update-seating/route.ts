@@ -43,8 +43,8 @@ export async function POST(request: Request) {
         // 4. ดึงข้อมูลจากแต่ละแถว (ต้องตรงกับชื่อคอลัมน์ใน Excel)
         const nationalId = record['เลขประจำตัวประชาชน']?.toString();
         const examVenue = record['สนามสอบ']?.toString() || null;
-        const examRoom = record['ห้องสอบ']?.toString() || null;
-        const seatNumber = record['เลขที่นั่งสอบ']?.toString() || null;
+        const examRoom = record['หมายเลขห้องสอบ']?.toString() || null;
+        const seatNumber = record['หมายเลขที่นั่ง']?.toString() || null;
 
         if (!nationalId) {
           throw new Error(`Row ${rowNum}: ไม่พบคอลัมน์ 'เลขประจำตัวประชาชน'`);
@@ -54,14 +54,12 @@ export async function POST(request: Request) {
         // เราใช้ update (ไม่ใช่ updateMany) เพื่อให้มัน Error
         // ถ้าหา nationalId ไม่เจอ (P2025)
         await tx.application.update({
-          where: { nationalId: nationalId },
-          data: {
-            examVenue: examVenue,
-            examRoom: examRoom,
-            seatNumber: seatNumber,
-            // (เราอาจจะอัปเดตสถานะเป็น PENDING_APPROVAL อีกครั้งก็ได้ ถ้าต้องการ)
-            // applicationStatus: 'PENDING_APPROVAL' 
-          },
+            where: { nationalId: nationalId }, // 1. หาเจอ
+            data: {
+                examVenue: examVenue,   // 2. อัปเดตด้วยค่าที่อ่านมา
+                examRoom: examRoom,     //    (ซึ่งอาจจะเป็น null)
+                seatNumber: seatNumber, //    (ซึ่งอาจจะเป็น null)
+            },
         });
 
         updatedCount++;
