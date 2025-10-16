@@ -34,7 +34,7 @@ function parseDate(dateString: string): Date | null {
     }
 }
 
-async function importApplicantsFromExcel(prisma: PrismaClient) {
+async function importApplicantsFromExcel(prisma: PrismaClient, academicYearId: number) { 
     console.log('Reading applicant data from xlsx...');
 
    const excelPath = path.join(__dirname, 'data', 'applicants-data.xlsx');
@@ -85,6 +85,7 @@ async function importApplicantsFromExcel(prisma: PrismaClient) {
                     gpaScience: parseFloat(record['ผลการเรียนเฉลี่ยวิทยาศาสตร์']) || null,
                     pdpaConsent: true,
                     schoolId: school.id,
+                    academicYearId: academicYearId,
                 },
             });
         } catch (e) {
@@ -97,7 +98,7 @@ async function importApplicantsFromExcel(prisma: PrismaClient) {
 async function main(){
     console.log('Start seeding...');
 
-    await importApplicantsFromExcel(prisma);
+    await importApplicantsFromExcel(prisma, 1);
 
     console.log('Seeding finished.');
 }

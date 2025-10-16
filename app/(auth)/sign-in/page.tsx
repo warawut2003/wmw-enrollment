@@ -4,6 +4,8 @@ import { useState,FormEvent, useEffect } from "react";
 import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import Button from "@/components/ui/Button";
+
 
 export default function SignInPage(){
     const router = useRouter();
@@ -101,13 +103,12 @@ export default function SignInPage(){
                     {/* แสดงข้อความ Error ถ้ามี */}
                     {error && <p className="text-sm text-red-600 text-center">{error}</p>}
 
-                    <button
-                        type="submit"
-                        disabled={isLoading}
-                        className="w-full py-2 px-4 bg-indigo-600 text-white font-semibold rounded-md shadow-sm hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                    >
-                        {isLoading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
-                    </button>
+                    <Button
+                    type="submit"
+                    isLoading ={isLoading}
+                    variant="primary"
+                    >เข้าสู่ระบบ</Button>
+                    
                 </form>
 
                 <p className="mt-6 text-center text-sm text-gray-600">
