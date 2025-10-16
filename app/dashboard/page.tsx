@@ -94,10 +94,10 @@ export default function DashboardPage() {
 
   const WithdrawnComponent = () => (
     <div className="md:col-span-3 bg-white p-6 rounded-lg shadow-md border-l-4 border-gray-500">
-        <h2 className="text-xl font-semibold text-gray-800">สถานะ: สละสิทธิ์</h2>
-        <p className="mt-2 text-gray-600">
-            ท่านได้ทำการสละสิทธิ์การเข้าศึกษาเรียบร้อยแล้ว ขอขอบคุณที่ให้ความสนใจ
-        </p>
+      <h2 className="text-xl font-semibold text-gray-800">สถานะ: สละสิทธิ์</h2>
+      <p className="mt-2 text-gray-600">
+        ท่านได้ทำการสละสิทธิ์การเข้าศึกษาเรียบร้อยแล้ว ขอขอบคุณที่ให้ความสนใจ
+      </p>
     </div>
   );
 
@@ -129,7 +129,7 @@ export default function DashboardPage() {
               // ถ้ามีสิทธิ์สอบ -> แสดงข้อมูลสอบ (ของเดิม)
               return <ExamInfoCard application={application} />;
             case 'WITHDRAWN':
-                return <WithdrawnComponent />;
+              return <WithdrawnComponent />;
             default:
               return null;
           }
@@ -144,15 +144,20 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {application && !['WITHDRAWN'].includes(application.applicationStatus) && (() =>{
-          const phase3RelatedStatuses = [
-            'CONFIRMED',
-            'PENDING_APPROVAL',
-            'INCORRECT_DOCS',
-            'ENROLLED'
+        {application && !['WITHDRAWN'].includes(application.applicationStatus) && (() => {
+
+          const isInPhase3Context = application.prorityRank != null;
+
+          const definitePhase3Statuses = [
+            'AWAITING_PHASE3_DECISION', // รอตัดสินใจ
+            'CONFIRMED', // ยืนยันสิทธิ์แล้ว (รอตรวจเอกสารเฟส 3)
+            'ENROLLED', // มอบตัวสำเร็จ
+            'WAITING_LIST',  // ตัวสำรอง
+            'NO_ACTION'// ไม่ดำเนินการ
           ];
 
-          if (phase3RelatedStatuses.includes(application.applicationStatus)) {
+          if (definitePhase3Statuses.includes(application.applicationStatus) || 
+          (application.applicationStatus === 'INCORRECT_DOCS' && isInPhase3Context)) {
             return <Phase3DocumentStatus
               application={application}
               submissionPeriod={{

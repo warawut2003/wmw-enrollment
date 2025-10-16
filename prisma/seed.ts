@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 import path from "path";
 import XLSX from 'xlsx';
@@ -32,6 +33,27 @@ function parseDate(dateString: string): Date | null {
         console.error(`Could not parse date: "${dateString}"`);
         return null;
     }
+}
+
+async function seedAdmin() {
+  console.log("🌐 Seeding admin user...");
+  const email = "admin_wmw@tsu.ac.th";
+  const password = "12345678";
+
+  // hash password
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  await prisma.user.upsert({
+    where: { email },
+    update: {},
+    create: {
+      email,
+      password: hashedPassword,
+      role: "ADMIN", // ต้องมี field role ใน model user
+      emailVerified: new Date(), // ให้ถือว่ายืนยันแล้ว
+    },
+  });
+  console.log(`✅ Admin created: ${email} (password: ${password})`);
 }
 
 async function importApplicantsFromExcel(prisma: PrismaClient, academicYearId: number) { 
@@ -98,7 +120,14 @@ async function importApplicantsFromExcel(prisma: PrismaClient, academicYearId: n
 async function main(){
     console.log('Start seeding...');
 
-    await importApplicantsFromExcel(prisma, 1);
+    // เราจะ seed admin user เป็นหลัก
+    await seedAdmin();
+
+    // หากต้องการ import ข้อมูลจาก Excel ให้ uncomment บรรทัดด้านล่างแล้วรัน `npx prisma db seed` อีกครั้ง
+    // const academicYear = await prisma.academicYear.findFirst(); // หรือหาวิธีระบุ academicYearId ที่ถูกต้อง
+    // if (academicYear) {
+    //   await importApplicantsFromExcel(prisma, academicYear.id);
+    // }
 
     console.log('Seeding finished.');
 }
