@@ -26,23 +26,39 @@ enum ApplicationStatus {
   CONFIRMED                // ยืนยันสิทธิ์แล้ว (รอตรวจเอกสารมอบตัว)
   WITHDRAWN                // สละสิทธิ์
   ENROLLED                 // มอบตัวสำเร็จ
-  INCOMPLETE_DOCS          // เอกสารไม่ครบ
+  INCORRECT_DOCS          // เอกสารไม่ถูกต้อง
   WAITING_LIST             // รอเรียกยืนยันสิทธิ์ (ตัวสำรอง)
   NO_ACTION                // ไม่ดำเนินการ
 }
 
 enum DocumentType {
-  PAYMENT_SLIP             // สลิปชำระเงิน
+  PHASE2_PAYMENT_SLIP      // สลิปชำระเงิน
   PHASE2_CONFIRMATION      // เอกสารยืนยันสิทธิ์สอบ
-  ENROLLMENT_CONFIRMATION  // หนังสือยืนยันสิทธิ์
-  ENROLLMENT_CONTRACT      // สัญญามอบตัว
-  ENROLLMENT_FORM          // ใบมอบตัว
+  PHASE3_CONSENT          // หนังสือยืนยันสิทธิ์
+  PHASE3_CONTRACT         // สัญญามอบตัว
+  PHASE3_ENROLLMENT       // ใบมอบตัว
 }
 
 enum DocumentStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+
+model AcademicYear {
+  id        Int      @id @default(autoincrement())
+  year      Int      @unique // เช่น 2568, 2569
+  name      String   // เช่น "การรับสมัครปีการศึกษา 2568"
+  isActive  Boolean  @default(false) // ✨ สำคัญมาก: ใช้บอกว่าปีไหนคือปีปัจจุบัน
+
+  phase2StartDate DateTime?
+  phase2EndDate   DateTime?
+  phase3StartDate DateTime?
+  phase3EndDate   DateTime?
+
+  // Relation: หนึ่งปีการศึกษามีได้หลายใบสมัคร
+  applications Application[]
 }
 
 model User {
@@ -76,6 +92,7 @@ model Application {
   applicationStatus   ApplicationStatus @default(AWAITING_PHASE2_DOCS)
   prorityRank Int?
   enrollmentType      String?
+  examVenue       String?
   examRoom            String?   
   seatNumber          String?   
   createdAt  DateTime   @default(now())
@@ -88,6 +105,9 @@ model Application {
   schoolId Int
 
   documents   Document[]
+
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id])
+  academicYearId Int
 }
 
 model Document {
@@ -96,11 +116,14 @@ model Document {
   fileUrl  String
   documentType  DocumentType
   status  DocumentStatus @default(PENDING)
+  rejectionReason String?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
   applicationId String
   application Application @relation(fields : [applicationId],references: [id])
+
+  @@unique([applicationId, documentType])
 }
 
 model School {
