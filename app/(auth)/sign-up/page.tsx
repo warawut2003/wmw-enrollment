@@ -3,6 +3,7 @@
 import { useState, ChangeEvent, FormEvent } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import Button from '@/components/ui/Button';
 
 interface ApplicantData {
     title: string;
@@ -39,6 +40,8 @@ export default function SignUpPage() {
     const [error, setError] = useState<string | null>(null);
     const [nationalIdChecked, setNationalIdChecked] = useState(false);
     const [verificationSent, setVerificationSent] = useState(false);
+        const [isSubmitting, setIsSubmitting] = useState(false); // สถานะสำหรับปุ่มลงทะเบียน
+
 
     const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
         const { name, value, type, checked } = e.target;
@@ -103,6 +106,8 @@ export default function SignUpPage() {
             return setError("กรุณาตรวจสอบเลขบัตรประชาชนก่อนลงทะเบียน");
         }
 
+        setIsSubmitting(true);
+
         try {
             const res = await fetch('/api/auth/sign-up', {
                 method: 'POST',
@@ -129,6 +134,8 @@ export default function SignUpPage() {
             
         } catch (err: any) {
             setError(err.message);
+        }finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -258,9 +265,13 @@ export default function SignUpPage() {
                                     </label>
                                 </div>
                                 <div className='mt-6 text-center'>
-                                    <button type = "submit" className='w-full md:w-1/2 px-4 py-2 bg-green-600 text-white font-semibold rounded-md shadow-sm hover:bg-green-700'>
+                                    <Button
+                                        type="submit" 
+                                        variant="primary" 
+                                        isLoading={isSubmitting}
+                                        className='w-full md:w-1/2 mx-auto shadow-lg hover:shadow-xl'>
                                         ลงทะเบียน
-                                    </button>
+                                    </Button>
                                 </div>
                             </fieldset>
                         </>

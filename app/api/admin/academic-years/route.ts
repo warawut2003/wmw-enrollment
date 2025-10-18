@@ -64,49 +64,73 @@ export async function POST(request: Request) {
       }
       
       // 6.2 สร้าง AcademicYear
-      const newAcademicYear = await tx.academicYear.create({
+      const academicYear = await tx.academicYear.create({
         data: academicYearData,
       });
 
-      const academicYearId = newAcademicYear.id; // นี่คือ ID ที่เราจะใช้
+      const academicYearId = academicYear.id;
       let processedCount = 0;
 
-      // 6.3 วนลูปข้อมูลนักเรียนจาก Excel
-      for (const record of records) {
-        // นำ Logic การสร้าง School จาก seed ของคุณมาใช้
+      // ---- Optimization Start ----
+
+      // 1. รวบรวมข้อมูล school และ nationalId ทั้งหมดก่อน
+      const schoolDataMap = new Map<string, { name: string; province: string }>();
+      const nationalIds = new Set<string>();
+      records.forEach(record => {
         const schoolName = record['โรงเรียนปัจจุบัน'];
         const schoolProvince = record['จังหวัดโรงเรียนปัจจุบัน'];
-
-        if (!schoolName || !schoolProvince) {
-          // ถ้าข้อมูลโรงเรียนไม่ครบ ให้ Rollback transaction
-          throw new Error(`Missing school data at row ${processedCount + 2}`);
+        if (schoolName && !schoolDataMap.has(schoolName)) {
+          schoolDataMap.set(schoolName, { name: schoolName, province: schoolProvince });
         }
-
-        let school = await tx.school.findUnique({
-          where: { name: schoolName },
-        });
-
-        if (!school) {
-          school = await tx.school.create({
-            data: {
-              name: schoolName,
-              province: schoolProvince,
-            },
-          });
-        }
-
-        // นำ Logic การ Upsert Application จาก seed ของคุณมาใช้
         const nationalId = record['เลขประจำตัวประชาชน'];
-        if (!nationalId) {
-          throw new Error(`Missing National ID at row ${processedCount + 2}`);
+        if (nationalId) {
+          nationalIds.add(nationalId);
+        }
+      });
+
+      // 2. จัดการ School ทั้งหมดในครั้งเดียว (Find or Create)
+      const schoolNames = Array.from(schoolDataMap.keys());
+      const existingSchools = await tx.school.findMany({
+        where: { name: { in: schoolNames } },
+      });
+
+      const existingSchoolNames = new Set(existingSchools.map(s => s.name));
+      const newSchoolsData = schoolNames
+        .filter(name => !existingSchoolNames.has(name))
+        .map(name => schoolDataMap.get(name)!);
+
+      if (newSchoolsData.length > 0) {
+        await tx.school.createMany({
+          data: newSchoolsData,
+        });
+      }
+
+      const allSchools = await tx.school.findMany({
+        where: { name: { in: schoolNames } },
+      });
+      const schoolNameToIdMap = new Map(allSchools.map(s => [s.name, s.id]));
+
+      // 3. อัปเดต Application ที่มีอยู่แล้ว
+      await tx.application.updateMany({
+        where: { nationalId: { in: Array.from(nationalIds) } },
+        data: { academicYearId: academicYearId },
+      });
+
+      // 4. สร้าง Application ใหม่ (เฉพาะที่ยังไม่มี)
+      const applicationsToCreate = [];
+      for (const record of records) {
+        const nationalId = record['เลขประจำตัวประชาชน'];
+        if (!nationalId || !record['โรงเรียนปัจจุบัน']) continue;
+
+        const schoolId = schoolNameToIdMap.get(record['โรงเรียนปัจจุบัน']);
+        if (!schoolId) {
+            throw new Error(`Could not find or create school: ${record['โรงเรียนปัจจุบัน']}`);
         }
 
-        await tx.application.upsert({
-          where: { nationalId: nationalId },
-          update: {
-            academicYearId: academicYearId,
-          },
-          create: {
+        // เราจะใช้ create แทน upsert โดยใช้ onConflict เพื่อประสิทธิภาพ
+        // แต่เนื่องจาก upsert ใน loop ช้า เราจะเปลี่ยนไปใช้ updateMany + createMany
+        // ในที่นี้เราจะรวบรวมข้อมูลเพื่อ createMany
+        applicationsToCreate.push({
             nationalId: nationalId,
             title: record['คำนำหน้าชื่อ'],
             firstName: record['ชื่อ'],
@@ -117,16 +141,24 @@ export async function POST(request: Request) {
             gpaMath: parseFloat(record['ผลการเรียนเฉลี่ยคณิตศาสตร์']) || null,
             gpaScience: parseFloat(record['ผลการเรียนเฉลี่ยวิทยาศาสตร์']) || null,
             pdpaConsent: true, // ตั้งค่าเริ่มต้นตามที่คุยกัน
-            schoolId: school.id,
-            academicYearId: academicYearId, // <-- นี่คือจุดเชื่อมโยงสำคัญ
-          },
+            schoolId: schoolId,
+            academicYearId: academicYearId,
         });
-        processedCount++;
-      } // end loop
+      }
+
+      if (applicationsToCreate.length > 0) {
+        const createResult = await tx.application.createMany({
+          data: applicationsToCreate,
+          skipDuplicates: true, // ถ้ามี nationalId ซ้ำอยู่แล้ว ให้ข้ามไป
+        });
+        processedCount = createResult.count;
+      }
+
+      // ---- Optimization End ----
 
       // 6.4 คืนค่าเมื่อสำเร็จ
       return {
-        ...newAcademicYear,
+        ...academicYear,
         studentsImported: processedCount,
       };
     }); // ---- สิ้นสุด Transaction ----

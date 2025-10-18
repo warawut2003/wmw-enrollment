@@ -157,7 +157,7 @@ export default function DashboardPage() {
           ];
 
           if (definitePhase3Statuses.includes(application.applicationStatus) || 
-          (application.applicationStatus === 'INCORRECT_DOCS' && isInPhase3Context)) {
+          (application.applicationStatus === 'INCORRECT_DOCS' && isInPhase3Context) ||(application.applicationStatus === 'PENDING_APPROVAL' && isInPhase3Context) ) {
             return <Phase3DocumentStatus
               application={application}
               submissionPeriod={{
